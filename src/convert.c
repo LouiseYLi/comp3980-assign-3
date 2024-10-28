@@ -18,6 +18,17 @@ char none(char c)
     return c;
 }
 
+void convertBuffer(char *buf, convertChar convert)
+{
+    int       i     = 0;
+    const int count = 50;
+    while(i < count && buf[i] != '\0')
+    {
+        buf[i] = convert(buf[i]);
+        ++i;
+    }
+}
+
 convertChar checkConvertArgs(const char arg)
 {
     convertChar convertFunction = NULL;
