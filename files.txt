@@ -1,0 +1,2 @@
+server src/server.c src/display.c src/convert.c src/write.c src/read.c include/display.h include/convert.h include/write.h include/read.h pthread
+client src/client.c src/display.c src/convert.c src/write.c src/read.c include/display.h include/convert.h include/write.h include/read.h
