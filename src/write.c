@@ -2,13 +2,6 @@
 
 typedef char (*convertChar)(char);
 
-struct clientData
-{
-    int  fifoIn;
-    int  fifoOut;
-    char conversion;
-};
-
 int writeStr(int fifo, const char *buf)
 {
     int i = 0;
@@ -34,19 +27,39 @@ int writeChar(int fifo, const char c)
     return 0;
 }
 
-ssize_t copy(int fd_in, int fd_out, size_t size, int *err, void *arg)
+int readUntilNewline(int fd, char *buf)
 {
-    char                    *buf;
-    ssize_t                  retval;
-    ssize_t                  nread;
-    ssize_t                  nwrote;
-    convertChar              convertFunction;
-    const struct clientData *data = (struct clientData *)arg;
+    int  retval = -1;
+    int  index  = 0;
+    char currentChar;
+    currentChar = '\0';
+    while(currentChar != '\n')
+    {
+        ssize_t nread = read(fd, &buf[index], sizeof(char));
+        currentChar   = buf[index];
+        if(nread <= 0)
+        {
+            retval = nread;
+            display("Error: unable to find delimiter for ip.");
+            goto done;
+        }
+    }
+done:
+    return retval;
+}
 
-    convertFunction = checkConvertArgs(data->conversion);
-    *err            = 0;
-    errno           = 0;
-    buf             = (char *)malloc(size);
+ssize_t copy(int fd_in, int fd_out, size_t size, int *err)
+{
+    char       *buf;
+    char       *ip;
+    ssize_t     retval;
+    ssize_t     nread;
+    ssize_t     nwrote;
+    convertChar convertFunction;
+    char        conversion;
+    *err  = 0;
+    errno = 0;
+    buf   = (char *)malloc(size);
 
     if(buf == NULL)
     {
@@ -55,6 +68,28 @@ ssize_t copy(int fd_in, int fd_out, size_t size, int *err, void *arg)
         goto done;
     }
 
+    ip = (char *)malloc(size);
+    if(ip == NULL)
+    {
+        *err   = errno;
+        retval = -1;
+        free(buf);
+        goto done;
+    }
+
+    conversion = readChar(fd_in);
+    if(conversion == EOF)
+    {
+        *err   = errno;
+        retval = -1;
+        goto cleanup;
+    }
+
+    readUntilNewline(fd_in, ip);
+
+    convertFunction = checkConvertArgs(conversion);
+
+    // Reads and converts message, then writes converted message
     do
     {
         errno = 0;
@@ -94,7 +129,7 @@ ssize_t copy(int fd_in, int fd_out, size_t size, int *err, void *arg)
     retval = nwrote;
 cleanup:
     free(buf);
-
+    free(ip);
 done:
     return retval;
 }

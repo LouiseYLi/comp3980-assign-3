@@ -19,8 +19,9 @@ int main(int argc, char *argv[])
     char currentChar;
 
     int         retval     = EXIT_SUCCESS;
-    const int   TOTAL_ARGS = 5;
+    const int   TOTAL_ARGS = 6;
     const char *message    = NULL;
+    const char *ip         = NULL;
     char        conversion = ' ';
     if(argc != TOTAL_ARGS)
     {
@@ -29,10 +30,13 @@ int main(int argc, char *argv[])
         goto done;
     }
 
-    while((option = getopt(argc, argv, "s:c:")) != -1)
+    while((option = getopt(argc, argv, "i:s:c:")) != -1)
     {
         switch(option)
         {
+            case 'i':
+                ip = optarg;
+                break;
             case 's':
                 message = optarg;
                 break;
@@ -45,9 +49,9 @@ int main(int argc, char *argv[])
                 goto done;
         }
     }
-    if(message == NULL || conversion == ' ')
+    if(ip == NULL || message == NULL || conversion == ' ')
     {
-        perror("Error: error assigning arguments.");
+        perror("Error: error assigning option arguments.");
         retval = EXIT_FAILURE;
         goto done;
     }
@@ -68,7 +72,11 @@ int main(int argc, char *argv[])
         goto done;
     }
 
+    // u192.168.0.XX
+    // message
     writeChar(fifoIn, conversion);
+    writeStr(fifoIn, ip);
+    writeChar(fifoIn, '\n');
     writeStr(fifoIn, message);
     writeChar(fifoIn, '\0');
 
