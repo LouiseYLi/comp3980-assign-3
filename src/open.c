@@ -11,7 +11,7 @@
 
 static void setup_network_address(struct sockaddr_storage *addr, socklen_t *addr_len, const char *address, in_port_t port, int *err);
 static int  connect_to_server(struct sockaddr_storage *addr, socklen_t addr_len, int *err);
-static int  accept_connection(const struct sockaddr_storage *addr, socklen_t addr_len, int backlog, int *err);
+static int  accept_connection(const struct sockaddr_storage *addr, socklen_t addr_len, int backlog, int server_fd, int *err);
 
 int open_network_socket_client(const char *address, in_port_t port, int *err)
 {
@@ -37,20 +37,48 @@ int open_network_socket_server(const char *address, in_port_t port, int backlog,
 {
     struct sockaddr_storage addr;
     socklen_t               addr_len;
-    int                     client_fd;
+    int server_fd;
+    int result;
 
     setup_network_address(&addr, &addr_len, address, port, err);
 
     if(*err != 0)
     {
-        client_fd = -1;
+        // client_fd = -1;
+        server_Fd = -1;
+        goto done;
+    }    
+
+    server_fd = socket(addr->ss_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
+
+    if(server_fd == -1)
+    {
+        // client_fd = -1;
+        *err      = errno;
         goto done;
     }
 
-    client_fd = accept_connection(&addr, addr_len, backlog, err);
+    result = bind(server_fd, (const struct sockaddr *)addr, addr_len);
+
+    if(result == -1)
+    {
+        server_fd = -1;
+        *err      = errno;
+        goto done;
+    }
+
+    result = listen(server_fd, backlog);
+
+    if(result == -1)
+    {
+        server_fd = -1;
+        *err      = errno;
+        goto done;
+    }
+    // client_fd = accept_connection(&addr, addr_len, backlog, err);
 
 done:
-    return client_fd;
+    return server_fd;
 }
 
 static void setup_network_address(struct sockaddr_storage *addr, socklen_t *addr_len, const char *address, in_port_t port, int *err)
@@ -86,38 +114,9 @@ static void setup_network_address(struct sockaddr_storage *addr, socklen_t *addr
     }
 }
 
-static int accept_connection(const struct sockaddr_storage *addr, socklen_t addr_len, int backlog, int *err)
+static int accept_connection(const struct sockaddr_storage *addr, socklen_t addr_len, int backlog, int server_fd, int *err)
 {
-    int server_fd;
-    int result;
     int client_fd;
-
-    server_fd = socket(addr->ss_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
-
-    if(server_fd == -1)
-    {
-        client_fd = -1;
-        *err      = errno;
-        goto done;
-    }
-
-    result = bind(server_fd, (const struct sockaddr *)addr, addr_len);
-
-    if(result == -1)
-    {
-        client_fd = -1;
-        *err      = errno;
-        goto done;
-    }
-
-    result = listen(server_fd, backlog);
-
-    if(result == -1)
-    {
-        client_fd = -1;
-        *err      = errno;
-        goto done;
-    }
 
     client_fd = accept(server_fd, NULL, 0);
 
@@ -127,9 +126,9 @@ static int accept_connection(const struct sockaddr_storage *addr, socklen_t addr
     }
 
 done:
-    close(server_fd);
-
-    return client_fd;
+    // close(server_fd);
+    return result;
+    // return client_fd;
 }
 
 static int connect_to_server(struct sockaddr_storage *addr, socklen_t addr_len, int *err)
