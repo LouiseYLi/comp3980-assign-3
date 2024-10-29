@@ -1,7 +1,9 @@
 #include "../include/convert.h"
 #include "../include/display.h"
+#include "../include/open.h"
 #include "../include/read.h"
 #include "../include/write.h"
+#include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <signal.h>
@@ -10,13 +12,21 @@
 #include <string.h>
 #include <unistd.h>
 
-#define FIFO_INPUT "./fifo/input"
-#define FIFO_OUTPUT "./fifo/output"
+// #define FIFO_INPUT "./fifo/input"
+// #define FIFO_OUTPUT "./fifo/output"
+#define ERR_NONE 0
+#define ERR_NO_DIGITS 1
+#define ERR_OUT_OF_RANGE 2
+#define ERR_INVALID_CHARS 3
+static void     *handleClientRequest(void *arg);
+static in_port_t convert_port(const char *str, int *err);
+int              parseArguments(int argc, char *argv[], void *arg);
+
+#define BACKLOG 5
 
 typedef char (*convertChar)(char);
 
-static void *handleClientRequest(void *arg);
-void         handleSignal(int signal);
+void handleSignal(int signal);
 
 // Here I ignored the warning for terminate because I wanted
 //  terminate to act as a global flag for handling SIGINT.
@@ -28,9 +38,11 @@ static int terminate = 0;
 
 struct clientData
 {
-    int  fifoIn;
-    int  fifoOut;
-    char conversion;
+    int       fd;
+    char      conversion;
+    char     *ip;
+    in_port_t inport;
+    in_port_t outport;
 };
 
 void handleSignal(int signal)
@@ -52,9 +64,9 @@ static void *handleClientRequest(void *arg)
         perror("Error: obtaining specific convert function");
         return NULL;
     }
-    while((currentChar = readChar(data->fifoIn)) != EOF)
+    while((currentChar = readChar(data->fd)) != EOF)
     {
-        if(writeChar(data->fifoOut, convertFunction(currentChar)) == -1)
+        if(writeChar(data->fd, convertFunction(currentChar)) == -1)
         {
             perror("Error: error writing to fifo.");
             return NULL;
@@ -67,14 +79,46 @@ static void *handleClientRequest(void *arg)
     return NULL;
 }
 
-int main(void)
+int parseArguments(int argc, char *argv[], void *arg)
+{
+    int                option;
+    int                retval = 0;
+    struct clientData *data   = (struct clientData *)arg;
+    data->ip                  = NULL;
+    while((option = getopt(argc, argv, "i:")) != -1)
+    {
+        if(option == 'i')
+        {
+            data->ip = optarg;
+        }
+        else
+        {
+            perror("Error: invalid options.");
+            retval = EXIT_FAILURE;
+            goto done;
+        }
+    }
+    if(data->ip == NULL)
+    {
+        perror("Error: unable to parse ip.");
+        retval = EXIT_FAILURE;
+        goto done;
+    }
+
+    retval = 0;
+
+done:
+    return retval;
+}
+
+int main(int argc, char *argv[])
 {
     struct clientData data;
-    int               fifoIn;
-    int               fifoOut;
     pthread_t         thread;
 
-    int retval = EXIT_SUCCESS;
+    int         retval = EXIT_SUCCESS;
+    int         err;
+    const char *PORT = "9999";
 
     if(signal(SIGINT, handleSignal) == SIG_ERR)
     {
@@ -83,32 +127,49 @@ int main(void)
         goto done;
     }
 
-    fifoIn = open(FIFO_INPUT, O_RDWR | O_CLOEXEC);
-    if(fifoIn == -1)
-    {
-        perror("Error: unable to open input fifo in client.");
-        retval = EXIT_FAILURE;
-        goto done;
-    }
-    fifoOut = open(FIFO_OUTPUT, O_RDWR | O_CLOEXEC);
-    if(fifoOut == -1)
-    {
-        close(fifoIn);
-        perror("Error: unable to open input fifo in client.");
-        retval = EXIT_FAILURE;
-        goto done;
-    }
+    err          = 0;
+    data.fd      = 0;
+    data.inport  = convert_port(PORT, &err);
+    data.outport = convert_port(PORT, &err);
 
-    data.fifoIn  = fifoIn;
-    data.fifoOut = fifoOut;
+    parseArguments(argc, argv, (void *)&data);
+    
+    data.fd = open_network_socket_server(data.ip, data.inport, BACKLOG, &err);
+
+    // fd = open_network_socket_server()
+    // if(fd == -1)
+    // {
+    //     perror("Error: unable to open input fifo in client.");
+    //     retval = EXIT_FAILURE;
+    //     goto done;
+    // }
+    // fifoOut = open(FIFO_OUTPUT, O_RDWR | O_CLOEXEC);
+    // if(fifoOut == -1)
+    // {
+    // close(fd);
+    // perror("Error: unable to open input fifo in client.");
+    // retval = EXIT_FAILURE;
+    // goto done;
+    // }
+
+    // data.fifoOut = fifoOut;
 
     while(terminate == 0)
     {
-        char conversion;
-        conversion = readChar(data.fifoIn);
-        if(conversion != EOF)
+        int nread;
+        err             = 0;
+        data.conversion = readChar(data.fd);
+        if(data.conversion != EOF)
         {
-            data.conversion = conversion;
+            nread = readUntilNewline(data.fd, data.ip);
+            display(data.ip);
+            if(nread <= 0)
+            {
+                perror("Error: reading for ip");
+                retval = EXIT_FAILURE;
+                goto cleanup;
+            }
+
             if(pthread_create(&thread, NULL, handleClientRequest, (void *)&data) != 0)
             {
                 perror("Error: creating thread");
@@ -130,8 +191,50 @@ int main(void)
     }
     display("server ran successfully");
 cleanup:
-    close(fifoIn);
-    close(fifoOut);
+    if(data.fd != 0)
+    {
+        close(data.fd);
+    }
+    // close(fifoOut);
+    free(data.ip);
 done:
     return retval;
+}
+
+static in_port_t convert_port(const char *str, int *err)
+{
+    in_port_t port;
+    char     *endptr;
+    long      val;
+
+    *err  = ERR_NONE;
+    port  = 0;
+    errno = 0;
+    val   = strtol(str, &endptr, 10);    // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+
+    // Check if no digits were found
+    if(endptr == str)
+    {
+        *err = ERR_NO_DIGITS;
+        goto done;
+    }
+
+    // Check for out-of-range errors
+    if(val < 0 || val > UINT16_MAX)
+    {
+        *err = ERR_OUT_OF_RANGE;
+        goto done;
+    }
+
+    // Check for trailing invalid characters
+    if(*endptr != '\0')
+    {
+        *err = ERR_INVALID_CHARS;
+        goto done;
+    }
+
+    port = (in_port_t)val;
+
+done:
+    return port;
 }

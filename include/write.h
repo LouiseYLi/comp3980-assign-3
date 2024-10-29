@@ -14,6 +14,6 @@ int writeChar(int fifo, char c);
 
 int readUntilNewline(int fd, char *buf);
 
-ssize_t copy(int fd_in, int fd_out, size_t size, int *err);
+ssize_t copy(size_t size, int *err, void *arg);
 
 #endif

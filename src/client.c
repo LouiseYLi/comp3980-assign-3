@@ -74,9 +74,9 @@ int main(int argc, char *argv[])
 
     // u192.168.0.XX
     // message
+    // writeStr(fifoIn, ip);
+    // writeChar(fifoIn, '\n');
     writeChar(fifoIn, conversion);
-    writeStr(fifoIn, ip);
-    writeChar(fifoIn, '\n');
     writeStr(fifoIn, message);
     writeChar(fifoIn, '\0');
 
