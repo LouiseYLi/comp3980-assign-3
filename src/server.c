@@ -4,25 +4,28 @@
 #include "../include/read.h"
 #include "../include/write.h"
 #include <errno.h>
-#include <fcntl.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/fcntl.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 // #define FIFO_INPUT "./fifo/input"
 // #define FIFO_OUTPUT "./fifo/output"
+#define CHILD_EXIT 42
 #define ERR_NONE 0
 #define ERR_NO_DIGITS 1
 #define ERR_OUT_OF_RANGE 2
 #define ERR_INVALID_CHARS 3
-static void     *handleClientRequest(void *arg);
+// static void     *handleClientRequest(void *arg);
 static in_port_t convert_port(const char *str, int *err);
 int              parseArguments(int argc, char *argv[], void *arg);
 
 #define BACKLOG 5
+#define SIZE 128
 
 typedef char (*convertChar)(char);
 
@@ -53,31 +56,31 @@ void handleSignal(int signal)
     }
 }
 
-static void *handleClientRequest(void *arg)
-{
-    const struct clientData *data = (struct clientData *)arg;
-    convertChar              convertFunction;
-    char                     currentChar;
-    convertFunction = checkConvertArgs(data->conversion);
-    if(convertFunction == NULL)
-    {
-        perror("Error: obtaining specific convert function");
-        return NULL;
-    }
-    while((currentChar = readChar(data->fd)) != EOF)
-    {
-        if(writeChar(data->fd, convertFunction(currentChar)) == -1)
-        {
-            perror("Error: error writing to fifo.");
-            return NULL;
-        }
-        if(currentChar == '\0')
-        {
-            break;
-        }
-    }
-    return NULL;
-}
+// static void *handleClientRequest(void *arg)
+// {
+//     const struct clientData *data = (struct clientData *)arg;
+//     convertChar              convertFunction;
+//     char                     currentChar;
+//     convertFunction = checkConvertArgs(data->conversion);
+//     if(convertFunction == NULL)
+//     {
+//         perror("Error: obtaining specific convert function");
+//         return NULL;
+//     }
+//     while((currentChar = readChar(data->fd)) != EOF)
+//     {
+//         if(writeChar(data->fd, convertFunction(currentChar)) == -1)
+//         {
+//             perror("Error: error writing to fifo.");
+//             return NULL;
+//         }
+//         if(currentChar == '\0')
+//         {
+//             break;
+//         }
+//     }
+//     return NULL;
+// }
 
 int parseArguments(int argc, char *argv[], void *arg)
 {
@@ -114,7 +117,8 @@ done:
 int main(int argc, char *argv[])
 {
     struct clientData data;
-    pthread_t         thread;
+    // pthread_t         thread;
+    pid_t pid;
 
     int         retval = EXIT_SUCCESS;
     int         err;
@@ -133,7 +137,7 @@ int main(int argc, char *argv[])
     data.outport = convert_port(PORT, &err);
 
     parseArguments(argc, argv, (void *)&data);
-    
+
     data.fd = open_network_socket_server(data.ip, data.inport, BACKLOG, &err);
 
     // fd = open_network_socket_server()
@@ -153,35 +157,52 @@ int main(int argc, char *argv[])
     // }
 
     // data.fifoOut = fifoOut;
-
+    display(data.ip);
     while(terminate == 0)
     {
-        int nread;
         err             = 0;
         data.conversion = readChar(data.fd);
         if(data.conversion != EOF)
         {
-            nread = readUntilNewline(data.fd, data.ip);
-            display(data.ip);
-            if(nread <= 0)
+            pid = fork();
+            if(pid == -1)
             {
-                perror("Error: reading for ip");
+                perror("Error: fork failed");
                 retval = EXIT_FAILURE;
                 goto cleanup;
             }
-
-            if(pthread_create(&thread, NULL, handleClientRequest, (void *)&data) != 0)
+            if(pid == 0)
             {
-                perror("Error: creating thread");
-                retval = EXIT_FAILURE;
-                goto cleanup;
+                display("Child process\n");
+                copy(SIZE, &err, (void *)&data);
+                _exit(CHILD_EXIT);
             }
-            if(pthread_join(thread, NULL) != 0)
+            else
             {
-                perror("Error: pthread_join in server.");
-                retval = EXIT_FAILURE;
-                goto cleanup;
+                int child_status;
+                waitpid(pid, &child_status, 0);
+                if(WIFEXITED(child_status))
+                {
+                    display("Child exited normally\n");
+                    // display("Child exited with status %d\n", WEXITSTATUS(child_status));
+                }
+                else
+                {
+                    display("Child did not exit normally\n");
+                }
             }
+            // if(pthread_create(&thread, NULL, handleClientRequest, (void *)&data) != 0)
+            // {
+            //     perror("Error: creating thread");
+            //     retval = EXIT_FAILURE;
+            //     goto cleanup;
+            // }
+            // if(pthread_join(thread, NULL) != 0)
+            // {
+            //     perror("Error: pthread_join in server.");
+            //     retval = EXIT_FAILURE;
+            //     goto cleanup;
+            // }
         }
     }
 
