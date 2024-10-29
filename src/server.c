@@ -1,5 +1,6 @@
 #include "../include/convert.h"
 #include "../include/display.h"
+#include "../include/networkutils.h"
 #include "../include/open.h"
 #include "../include/read.h"
 #include "../include/write.h"
@@ -39,14 +40,14 @@ void handleSignal(int signal);
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static int terminate = 0;
 
-struct clientData
-{
-    int       fd;
-    char      conversion;
-    char     *ip;
-    in_port_t inport;
-    in_port_t outport;
-};
+// struct socketNet
+// {
+//     int       fd;
+//     char      conversion;
+//     char     *ip;
+//     in_port_t inport;
+//     in_port_t outport;
+// };
 
 void handleSignal(int signal)
 {
@@ -56,38 +57,12 @@ void handleSignal(int signal)
     }
 }
 
-// static void *handleClientRequest(void *arg)
-// {
-//     const struct clientData *data = (struct clientData *)arg;
-//     convertChar              convertFunction;
-//     char                     currentChar;
-//     convertFunction = checkConvertArgs(data->conversion);
-//     if(convertFunction == NULL)
-//     {
-//         perror("Error: obtaining specific convert function");
-//         return NULL;
-//     }
-//     while((currentChar = readChar(data->fd)) != EOF)
-//     {
-//         if(writeChar(data->fd, convertFunction(currentChar)) == -1)
-//         {
-//             perror("Error: error writing to fifo.");
-//             return NULL;
-//         }
-//         if(currentChar == '\0')
-//         {
-//             break;
-//         }
-//     }
-//     return NULL;
-// }
-
 int parseArguments(int argc, char *argv[], void *arg)
 {
-    int                option;
-    int                retval = 0;
-    struct clientData *data   = (struct clientData *)arg;
-    data->ip                  = NULL;
+    int               option;
+    int               retval = 0;
+    struct socketNet *data   = (struct socketNet *)arg;
+    data->ip                 = NULL;
     while((option = getopt(argc, argv, "i:")) != -1)
     {
         if(option == 'i')
@@ -114,9 +89,67 @@ done:
     return retval;
 }
 
+// static void *handleClientRequest(void *arg)
+// {
+//     const struct socketNet *data = (struct socketNet *)arg;
+//     convertChar              convertFunction;
+//     char                     currentChar;
+//     convertFunction = checkConvertArgs(data->conversion);
+//     if(convertFunction == NULL)
+//     {
+//         perror("Error: obtaining specific convert function");
+//         return NULL;
+//     }
+//     while((currentChar = readChar(data->fd)) != EOF)
+//     {
+//         if(writeChar(data->fd, convertFunction(currentChar)) == -1)
+//         {
+//             perror("Error: error writing to fifo.");
+//             return NULL;
+//         }
+//         if(currentChar == '\0')
+//         {
+//             break;
+//         }
+//     }
+//     return NULL;
+// }
+
+// int parseArguments(int argc, char *argv[], void *arg)
+// {
+//     int               option;
+//     int               retval = 0;
+//     struct socketNet *data   = (struct socketNet *)arg;
+//     data->ip                 = NULL;
+//     while((option = getopt(argc, argv, "i:")) != -1)
+//     {
+//         if(option == 'i')
+//         {
+//             data->ip = optarg;
+//         }
+//         else
+//         {
+//             perror("Error: invalid options.");
+//             retval = EXIT_FAILURE;
+//             goto done;
+//         }
+//     }
+//     if(data->ip == NULL)
+//     {
+//         perror("Error: unable to parse ip.");
+//         retval = EXIT_FAILURE;
+//         goto done;
+//     }
+
+//     retval = 0;
+
+// done:
+//     return retval;
+// }
+
 int main(int argc, char *argv[])
 {
-    struct clientData data;
+    struct socketNet data;
     // pthread_t         thread;
     pid_t pid;
 

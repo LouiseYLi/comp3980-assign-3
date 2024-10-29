@@ -8,4 +8,6 @@
 
 char readChar(int fifo);
 
+// int parseArguments(int argc, char *argv[], void *arg);
+
 #endif
