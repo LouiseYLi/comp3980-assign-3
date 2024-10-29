@@ -17,20 +17,20 @@ int open_network_socket_client(const char *address, in_port_t port, int *err)
 {
     struct sockaddr_storage addr;
     socklen_t               addr_len;
-    int                     fd;
+    int                     client_fd;
 
     setup_network_address(&addr, &addr_len, address, port, err);
 
     if(*err != 0)
     {
-        fd = -1;
+        client_fd = -1;
         goto done;
     }
 
-    fd = connect_to_server(&addr, addr_len, err);
-
+    client_fd = connect_to_server(&addr, addr_len, err);
+    // Must cleanup if client_fd == -1.
 done:
-    return fd;
+    return client_fd;
 }
 
 int open_network_socket_server(const char *address, in_port_t port, int backlog, int *err)
@@ -44,7 +44,6 @@ int open_network_socket_server(const char *address, in_port_t port, int backlog,
 
     if(*err != 0)
     {
-        // client_fd = -1;
         server_Fd = -1;
         goto done;
     }    
@@ -53,7 +52,6 @@ int open_network_socket_server(const char *address, in_port_t port, int backlog,
 
     if(server_fd == -1)
     {
-        // client_fd = -1;
         *err      = errno;
         goto done;
     }
@@ -126,33 +124,31 @@ static int accept_connection(const struct sockaddr_storage *addr, socklen_t addr
     }
 
 done:
-    // close(server_fd);
     return client_fd;
-    // return client_fd;
 }
 
 static int connect_to_server(struct sockaddr_storage *addr, socklen_t addr_len, int *err)
 {
-    int fd;
+    int client_fd;
     int result;
 
-    fd = socket(addr->ss_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
+    client_fd = socket(addr->ss_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
 
-    if(fd == -1)
+    if(client_fd == -1)
     {
         *err = errno;
         goto done;
     }
 
-    result = connect(fd, (const struct sockaddr *)addr, addr_len);
+    result = connect(client_fd, (const struct sockaddr *)addr, addr_len);
 
     if(result == -1)
     {
         *err = errno;
-        close(fd);
-        fd = -1;
+        close(client_fd);
+        client_fd = -1;
     }
 
 done:
-    return fd;
+    return client_fd;
 }
