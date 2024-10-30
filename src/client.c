@@ -21,20 +21,25 @@
 
 int main(int argc, char *argv[])
 {
-    const char      *PORT;
+    // char            *message;
     struct socketNet data;
     int              option;
     char             currentChar;
+    int              retval;
     int              err;
 
-    int         retval     = EXIT_SUCCESS;
-    const int   TOTAL_ARGS = 6;
+    const int   TOTAL_ARGS = 7;
+    const char *PORT       = "9999";
     const char *message    = NULL;
-    // const char *ip         = NULL;
-    data.ip         = NULL;
-    data.conversion = ' ';
-    PORT            = "9999";
-    err             = 0;
+    retval                 = 0;
+    err                    = 0;
+    data.ip                = NULL;
+    data.conversion        = ' ';
+    data.server_fd         = 0;
+    data.client_fd         = 0;
+    data.inport            = convert_port(PORT, &err);
+    data.outport           = convert_port(PORT, &err);
+
     if(argc != TOTAL_ARGS)
     {
         perror("Error: invalid number of arguments.");
@@ -68,24 +73,32 @@ int main(int argc, char *argv[])
         goto done;
     }
 
-    data.fd      = 0;
-    data.inport  = convert_port(PORT, &err);
-    data.outport = convert_port(PORT, &err);
-
-    data.fd = open_network_socket_client(data.ip, data.outport, &err);
-    if(data.fd == -1)
+    data.client_fd = open_network_socket_client(data.ip, data.outport, &err);
+    if(data.client_fd == -1)
     {
-        perror("Error: unable to open socket in client.");
+        perror("Error: unable to open client socket.");
         retval = EXIT_FAILURE;
         goto done;
     }
 
     // umessage
-    writeChar(data.fd, data.conversion);
-    writeStr(data.fd, message);
-    writeChar(data.fd, '\0');
+    if(writeChar(data.client_fd, data.conversion) == -1)
+    {
+        retval = -1;
+        goto cleanup;
+    }
+    if(writeStr(data.client_fd, message) == -1)
+    {
+        retval = -1;
+        goto cleanup;
+    }
+    if(writeChar(data.client_fd, '\0') == -1)
+    {
+        retval = -1;
+        goto cleanup;
+    }
 
-    while((currentChar = readChar(data.fd)) != EOF)
+    while((currentChar = readChar(data.client_fd)) != EOF)
     {
         if(currentChar == '\0')
         {
@@ -93,11 +106,9 @@ int main(int argc, char *argv[])
         }
         displayChar(currentChar);
     }
-
     display("\nclient ran successfully");
-
-    // cleanup:
-    close(data.fd);
+cleanup:
+    close(data.client_fd);
 done:
     return retval;
 }

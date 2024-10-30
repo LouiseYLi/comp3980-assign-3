@@ -15,7 +15,8 @@
 
 struct socketNet
 {
-    int       fd;
+    int       server_fd;
+    int       client_fd;
     char      conversion;
     char     *ip;
     in_port_t inport;

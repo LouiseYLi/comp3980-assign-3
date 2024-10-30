@@ -84,9 +84,18 @@ int main(int argc, char *argv[])
 {
     struct socketNet data;
     pid_t            pid;
+    int              retval;
     int              err;
-    int              retval = EXIT_SUCCESS;
-    const char      *PORT   = "9999";
+
+    const char *PORT = "9999";
+    retval           = 0;
+    err              = 0;
+    data.ip          = NULL;
+    data.conversion  = ' ';
+    data.server_fd   = 0;
+    data.client_fd   = 0;
+    data.inport      = convert_port(PORT, &err);
+    data.outport     = convert_port(PORT, &err);
 
     if(signal(SIGINT, handleSignal) == SIG_ERR)
     {
@@ -95,15 +104,15 @@ int main(int argc, char *argv[])
         goto done;
     }
 
-    err          = 0;
-    data.fd      = 0;
-    data.inport  = convert_port(PORT, &err);
-    data.outport = convert_port(PORT, &err);
-
     parseArguments(argc, argv, (void *)&data);
 
-    data.fd = open_network_socket_server(data.ip, data.inport, BACKLOG, &err);
-
+    data.server_fd = open_network_socket_server(data.ip, data.inport, BACKLOG, &err);
+    if(data.server_fd < 0)
+    {
+        perror("Error: opening server-side network socket.");
+        retval = -1;
+        goto done;
+    }
     // fd = open_network_socket_server()
     // if(fd == -1)
     // {
@@ -121,11 +130,17 @@ int main(int argc, char *argv[])
     // }
 
     // data.fifoOut = fifoOut;
-    display(data.ip);
     while(terminate == 0)
     {
-        err             = 0;
-        data.conversion = readChar(data.fd);
+        err            = 0;
+        data.client_fd = accept_connection(data.server_fd, &err);
+        if(data.client_fd < 0)
+        {
+            perror("Error: server error accepting connection from client.");
+            retval = -1;
+            goto done;
+        }
+        data.conversion = readChar(data.server_fd);
         if(data.conversion != EOF)
         {
             pid = fork();
@@ -173,12 +188,16 @@ int main(int argc, char *argv[])
     if(terminate == 1)
     {
         display("Signal received! Terminating...");
+        display("server ran successfully");
     }
-    display("server ran successfully");
 cleanup:
-    if(data.fd != 0)
+    if(data.server_fd != 0)
     {
-        close(data.fd);
+        close(data.server_fd);
+    }
+    if(data.client_fd != 0)
+    {
+        close(data.client_fd);
     }
     // close(fifoOut);
     free(data.ip);
