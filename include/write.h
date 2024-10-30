@@ -11,7 +11,7 @@
 
 int writeStr(int fifo, const char *buf);
 
-int writeChar(int fifo, char c);
+int writeChar(int fd, char c);
 
 int readUntilNewline(int fd, char *buf);
 

@@ -18,7 +18,7 @@
 static int parseArguments(int argc, char *argv[], void *arg);
 
 #define BACKLOG 5
-// #define SIZE 128
+#define SIZE 128
 
 typedef char (*convertChar)(char);
 
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
             if(pid == 0)
             {
                 display("Child process\n");
-                // copy(SIZE, &err, (void *)&data);
+                copy(SIZE, &err, (void *)&data);
                 _exit(CHILD_EXIT);
             }
             else

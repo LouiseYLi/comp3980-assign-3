@@ -16,12 +16,12 @@ int writeStr(int fifo, const char *buf)
     return 0;
 }
 
-int writeChar(int fifo, const char c)
+int writeChar(int fd, const char c)
 {
-    ssize_t bytes_written = write(fifo, &c, sizeof(char));
+    ssize_t bytes_written = send(fd, &c, sizeof(char), 0);
     if(bytes_written == -1)
     {
-        perror("Error: could not write fifo.");
+        perror("Error: could not write fd.");
         return -1;
     }
     return 0;
@@ -72,7 +72,7 @@ ssize_t copy(size_t size, int *err, void *arg)
     do
     {
         errno = 0;
-        nread = read(data->client_fd, buf, size);
+        nread = recv(data->client_fd, buf, size, 0);
 
         if(nread < 0)
         {
@@ -92,7 +92,7 @@ ssize_t copy(size_t size, int *err, void *arg)
 
             remaining = (size_t)(nread - nwrote);
             errno     = 0;
-            twrote    = write(data->client_fd, &buf[nwrote], remaining);
+            twrote    = send(data->client_fd, &buf[nwrote], remaining, 0);
 
             if(twrote < 0)
             {
