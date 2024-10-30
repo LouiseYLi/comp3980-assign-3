@@ -17,13 +17,13 @@
 // #define FIFO_INPUT "./fifo/input"
 // #define FIFO_OUTPUT "./fifo/output"
 #define CHILD_EXIT 42
-#define ERR_NONE 0
-#define ERR_NO_DIGITS 1
-#define ERR_OUT_OF_RANGE 2
-#define ERR_INVALID_CHARS 3
+// #define ERR_NONE 0
+// #define ERR_NO_DIGITS 1
+// #define ERR_OUT_OF_RANGE 2
+// #define ERR_INVALID_CHARS 3
 // static void     *handleClientRequest(void *arg);
-static in_port_t convert_port(const char *str, int *err);
-int              parseArguments(int argc, char *argv[], void *arg);
+// static in_port_t convert_port(const char *str, int *err);
+static int parseArguments(int argc, char *argv[], void *arg);
 
 #define BACKLOG 5
 #define SIZE 128
@@ -40,15 +40,6 @@ void handleSignal(int signal);
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static int terminate = 0;
 
-// struct socketNet
-// {
-//     int       fd;
-//     char      conversion;
-//     char     *ip;
-//     in_port_t inport;
-//     in_port_t outport;
-// };
-
 void handleSignal(int signal)
 {
     if(signal == SIGINT)
@@ -57,12 +48,12 @@ void handleSignal(int signal)
     }
 }
 
-int parseArguments(int argc, char *argv[], void *arg)
+static int parseArguments(int argc, char *argv[], void *arg)
 {
     int               option;
-    int               retval = 0;
-    struct socketNet *data   = (struct socketNet *)arg;
-    data->ip                 = NULL;
+    int               retval;
+    struct socketNet *data = (struct socketNet *)arg;
+    data->ip               = NULL;
     while((option = getopt(argc, argv, "i:")) != -1)
     {
         if(option == 'i')
@@ -72,14 +63,14 @@ int parseArguments(int argc, char *argv[], void *arg)
         else
         {
             perror("Error: invalid options.");
-            retval = EXIT_FAILURE;
+            retval = -1;
             goto done;
         }
     }
     if(data->ip == NULL)
     {
         perror("Error: unable to parse ip.");
-        retval = EXIT_FAILURE;
+        retval = -1;
         goto done;
     }
 
@@ -89,73 +80,13 @@ done:
     return retval;
 }
 
-// static void *handleClientRequest(void *arg)
-// {
-//     const struct socketNet *data = (struct socketNet *)arg;
-//     convertChar              convertFunction;
-//     char                     currentChar;
-//     convertFunction = checkConvertArgs(data->conversion);
-//     if(convertFunction == NULL)
-//     {
-//         perror("Error: obtaining specific convert function");
-//         return NULL;
-//     }
-//     while((currentChar = readChar(data->fd)) != EOF)
-//     {
-//         if(writeChar(data->fd, convertFunction(currentChar)) == -1)
-//         {
-//             perror("Error: error writing to fifo.");
-//             return NULL;
-//         }
-//         if(currentChar == '\0')
-//         {
-//             break;
-//         }
-//     }
-//     return NULL;
-// }
-
-// int parseArguments(int argc, char *argv[], void *arg)
-// {
-//     int               option;
-//     int               retval = 0;
-//     struct socketNet *data   = (struct socketNet *)arg;
-//     data->ip                 = NULL;
-//     while((option = getopt(argc, argv, "i:")) != -1)
-//     {
-//         if(option == 'i')
-//         {
-//             data->ip = optarg;
-//         }
-//         else
-//         {
-//             perror("Error: invalid options.");
-//             retval = EXIT_FAILURE;
-//             goto done;
-//         }
-//     }
-//     if(data->ip == NULL)
-//     {
-//         perror("Error: unable to parse ip.");
-//         retval = EXIT_FAILURE;
-//         goto done;
-//     }
-
-//     retval = 0;
-
-// done:
-//     return retval;
-// }
-
 int main(int argc, char *argv[])
 {
     struct socketNet data;
-    // pthread_t         thread;
-    pid_t pid;
-
-    int         retval = EXIT_SUCCESS;
-    int         err;
-    const char *PORT = "9999";
+    pid_t            pid;
+    int              err;
+    int              retval = EXIT_SUCCESS;
+    const char      *PORT   = "9999";
 
     if(signal(SIGINT, handleSignal) == SIG_ERR)
     {
@@ -255,40 +186,40 @@ done:
     return retval;
 }
 
-static in_port_t convert_port(const char *str, int *err)
-{
-    in_port_t port;
-    char     *endptr;
-    long      val;
+// static in_port_t convert_port(const char *str, int *err)
+// {
+//     in_port_t port;
+//     char     *endptr;
+//     long      val;
 
-    *err  = ERR_NONE;
-    port  = 0;
-    errno = 0;
-    val   = strtol(str, &endptr, 10);    // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+//     *err  = ERR_NONE;
+//     port  = 0;
+//     errno = 0;
+//     val   = strtol(str, &endptr, 10);    // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 
-    // Check if no digits were found
-    if(endptr == str)
-    {
-        *err = ERR_NO_DIGITS;
-        goto done;
-    }
+//     // Check if no digits were found
+//     if(endptr == str)
+//     {
+//         *err = ERR_NO_DIGITS;
+//         goto done;
+//     }
 
-    // Check for out-of-range errors
-    if(val < 0 || val > UINT16_MAX)
-    {
-        *err = ERR_OUT_OF_RANGE;
-        goto done;
-    }
+//     // Check for out-of-range errors
+//     if(val < 0 || val > UINT16_MAX)
+//     {
+//         *err = ERR_OUT_OF_RANGE;
+//         goto done;
+//     }
 
-    // Check for trailing invalid characters
-    if(*endptr != '\0')
-    {
-        *err = ERR_INVALID_CHARS;
-        goto done;
-    }
+//     // Check for trailing invalid characters
+//     if(*endptr != '\0')
+//     {
+//         *err = ERR_INVALID_CHARS;
+//         goto done;
+//     }
 
-    port = (in_port_t)val;
+//     port = (in_port_t)val;
 
-done:
-    return port;
-}
+// done:
+//     return port;
+// }

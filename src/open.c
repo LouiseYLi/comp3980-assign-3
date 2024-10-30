@@ -11,7 +11,10 @@
 
 static void setup_network_address(struct sockaddr_storage *addr, socklen_t *addr_len, const char *address, in_port_t port, int *err);
 static int  connect_to_server(struct sockaddr_storage *addr, socklen_t addr_len, int *err);
-static int  accept_connection(const struct sockaddr_storage *addr, socklen_t addr_len, int backlog, int server_fd, int *err);
+
+// also removed const struct sockaddr_storage *addr, from params here in accept_connection
+//      socklen_t addr_len, int backlog,
+// static int accept_connection(int server_fd, int *err);
 
 int open_network_socket_client(const char *address, in_port_t port, int *err)
 {
@@ -37,29 +40,31 @@ int open_network_socket_server(const char *address, in_port_t port, int backlog,
 {
     struct sockaddr_storage addr;
     socklen_t               addr_len;
-    int server_fd;
-    int result;
+    int                     server_fd;
+    int                     result;
 
+    // I dereferenced addr to get the address of it
     setup_network_address(&addr, &addr_len, address, port, err);
 
     if(*err != 0)
     {
-        server_Fd = -1;
+        server_fd = -1;
         goto done;
-    }    
-
-    server_fd = socket(addr->ss_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
+    }
+    ////ERROR HERE
+    server_fd = socket(addr.ss_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
 
     if(server_fd == -1)
     {
-        *err      = errno;
+        *err = errno;
         goto done;
     }
 
-    result = bind(server_fd, (const struct sockaddr *)addr, addr_len);
+    result = bind(server_fd, (const struct sockaddr *)&addr, addr_len);
 
     if(result == -1)
     {
+        close(server_fd);
         server_fd = -1;
         *err      = errno;
         goto done;
@@ -69,6 +74,7 @@ int open_network_socket_server(const char *address, in_port_t port, int backlog,
 
     if(result == -1)
     {
+        close(server_fd);
         server_fd = -1;
         *err      = errno;
         goto done;
@@ -112,7 +118,9 @@ static void setup_network_address(struct sockaddr_storage *addr, socklen_t *addr
     }
 }
 
-static int accept_connection(const struct sockaddr_storage *addr, socklen_t addr_len, int backlog, int server_fd, int *err)
+// removed const struct sockaddr_storage *addr, from parameters
+//      socklen_t addr_len, int backlog,
+int accept_connection(int server_fd, int *err)
 {
     int client_fd;
 
@@ -123,7 +131,6 @@ static int accept_connection(const struct sockaddr_storage *addr, socklen_t addr
         *err = errno;
     }
 
-done:
     return client_fd;
 }
 

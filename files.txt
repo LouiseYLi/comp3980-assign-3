@@ -1,2 +1,2 @@
-server src/server.c src/display.c src/convert.c src/write.c src/read.c src/open.c include/display.h include/convert.h include/write.h include/read.h include/open.h pthread
-client src/client.c src/display.c src/convert.c src/write.c src/read.c src/open.c include/display.h include/convert.h include/write.h include/read.h include/open.h 
+server src/server.c src/display.c src/convert.c src/write.c src/read.c src/open.c src/networkutils.c include/display.h include/convert.h include/write.h include/read.h include/open.h include/networkutils.h
+client src/client.c src/display.c src/convert.c src/write.c src/read.c src/open.c src/networkutils.c include/display.h include/convert.h include/write.h include/read.h include/open.h include/networkutils.h
