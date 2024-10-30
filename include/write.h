@@ -1,6 +1,7 @@
 #ifndef PROGRAMMING101_WRITE_H
 #define PROGRAMMING101_WRITE_H
 #include "../include/convert.h"
+#include "../include/networkutils.h"
 #include "../include/read.h"
 #include <errno.h>
 #include <stdint.h>

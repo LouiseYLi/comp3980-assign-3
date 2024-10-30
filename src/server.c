@@ -14,19 +14,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// #define FIFO_INPUT "./fifo/input"
-// #define FIFO_OUTPUT "./fifo/output"
 #define CHILD_EXIT 42
-// #define ERR_NONE 0
-// #define ERR_NO_DIGITS 1
-// #define ERR_OUT_OF_RANGE 2
-// #define ERR_INVALID_CHARS 3
-// static void     *handleClientRequest(void *arg);
-// static in_port_t convert_port(const char *str, int *err);
 static int parseArguments(int argc, char *argv[], void *arg);
 
 #define BACKLOG 5
-#define SIZE 128
+// #define SIZE 128
 
 typedef char (*convertChar)(char);
 
@@ -113,47 +105,26 @@ int main(int argc, char *argv[])
         retval = -1;
         goto done;
     }
-    // fd = open_network_socket_server()
-    // if(fd == -1)
-    // {
-    //     perror("Error: unable to open input fifo in client.");
-    //     retval = EXIT_FAILURE;
-    //     goto done;
-    // }
-    // fifoOut = open(FIFO_OUTPUT, O_RDWR | O_CLOEXEC);
-    // if(fifoOut == -1)
-    // {
-    // close(fd);
-    // perror("Error: unable to open input fifo in client.");
-    // retval = EXIT_FAILURE;
-    // goto done;
-    // }
 
-    // data.fifoOut = fifoOut;
     while(terminate == 0)
     {
-        err            = 0;
+        err = 0;
+        display(data.ip);
         data.client_fd = accept_connection(data.server_fd, &err);
-        if(data.client_fd < 0)
+        if(data.client_fd >= 0)
         {
-            perror("Error: server error accepting connection from client.");
-            retval = -1;
-            goto done;
-        }
-        data.conversion = readChar(data.server_fd);
-        if(data.conversion != EOF)
-        {
-            pid = fork();
+            data.conversion = readChar(data.client_fd);
+            pid             = fork();
             if(pid == -1)
             {
                 perror("Error: fork failed");
-                retval = EXIT_FAILURE;
+                retval = -1;
                 goto cleanup;
             }
             if(pid == 0)
             {
                 display("Child process\n");
-                copy(SIZE, &err, (void *)&data);
+                // copy(SIZE, &err, (void *)&data);
                 _exit(CHILD_EXIT);
             }
             else
@@ -163,33 +134,26 @@ int main(int argc, char *argv[])
                 if(WIFEXITED(child_status))
                 {
                     display("Child exited normally\n");
-                    // display("Child exited with status %d\n", WEXITSTATUS(child_status));
                 }
                 else
                 {
                     display("Child did not exit normally\n");
                 }
             }
-            // if(pthread_create(&thread, NULL, handleClientRequest, (void *)&data) != 0)
-            // {
-            //     perror("Error: creating thread");
-            //     retval = EXIT_FAILURE;
-            //     goto cleanup;
-            // }
-            // if(pthread_join(thread, NULL) != 0)
-            // {
-            //     perror("Error: pthread_join in server.");
-            //     retval = EXIT_FAILURE;
-            //     goto cleanup;
-            // }
+        }
+        else
+        {
+            perror("Error: server error accepting connection from client.");
+            retval = -1;
+            goto done;
         }
     }
 
     if(terminate == 1)
     {
         display("Signal received! Terminating...");
-        display("server ran successfully");
     }
+    display("Server ran successfully");
 cleanup:
     if(data.server_fd != 0)
     {
@@ -199,46 +163,7 @@ cleanup:
     {
         close(data.client_fd);
     }
-    // close(fifoOut);
-    free(data.ip);
+    // free(data.ip);
 done:
     return retval;
 }
-
-// static in_port_t convert_port(const char *str, int *err)
-// {
-//     in_port_t port;
-//     char     *endptr;
-//     long      val;
-
-//     *err  = ERR_NONE;
-//     port  = 0;
-//     errno = 0;
-//     val   = strtol(str, &endptr, 10);    // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-
-//     // Check if no digits were found
-//     if(endptr == str)
-//     {
-//         *err = ERR_NO_DIGITS;
-//         goto done;
-//     }
-
-//     // Check for out-of-range errors
-//     if(val < 0 || val > UINT16_MAX)
-//     {
-//         *err = ERR_OUT_OF_RANGE;
-//         goto done;
-//     }
-
-//     // Check for trailing invalid characters
-//     if(*endptr != '\0')
-//     {
-//         *err = ERR_INVALID_CHARS;
-//         goto done;
-//     }
-
-//     port = (in_port_t)val;
-
-// done:
-//     return port;
-// }

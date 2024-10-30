@@ -2,14 +2,6 @@
 
 typedef char (*convertChar)(char);
 
-struct clientData
-{
-    int   fdIn;
-    int   fdOut;
-    char  conversion;
-    char *ip;
-};
-
 int writeStr(int fifo, const char *buf)
 {
     int i = 0;
@@ -58,16 +50,16 @@ done:
 
 ssize_t copy(size_t size, int *err, void *arg)
 {
-    char                    *buf;
-    ssize_t                  retval;
-    ssize_t                  nread;
-    ssize_t                  nwrote;
-    convertChar              convertFunction;
-    const struct clientData *data = (struct clientData *)arg;
-    convertFunction               = checkConvertArgs(data->conversion);
-    *err                          = 0;
-    errno                         = 0;
-    buf                           = (char *)malloc(size);
+    char                   *buf;
+    ssize_t                 retval;
+    ssize_t                 nread;
+    ssize_t                 nwrote;
+    convertChar             convertFunction;
+    const struct socketNet *data = (struct socketNet *)arg;
+    convertFunction              = checkConvertArgs(data->conversion);
+    *err                         = 0;
+    errno                        = 0;
+    buf                          = (char *)malloc(size);
 
     if(buf == NULL)
     {
@@ -80,7 +72,7 @@ ssize_t copy(size_t size, int *err, void *arg)
     do
     {
         errno = 0;
-        nread = read(data->fdIn, buf, size);
+        nread = read(data->client_fd, buf, size);
 
         if(nread < 0)
         {
@@ -100,7 +92,7 @@ ssize_t copy(size_t size, int *err, void *arg)
 
             remaining = (size_t)(nread - nwrote);
             errno     = 0;
-            twrote    = write(data->fdOut, &buf[nwrote], remaining);
+            twrote    = write(data->client_fd, &buf[nwrote], remaining);
 
             if(twrote < 0)
             {
