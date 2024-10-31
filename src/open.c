@@ -42,6 +42,7 @@ int open_network_socket_server(const char *address, in_port_t port, int backlog,
     socklen_t               addr_len;
     int                     server_fd;
     int                     result;
+    int                     flags;
 
     // I dereferenced addr to get the address of it
     setup_network_address(&addr, &addr_len, address, port, err);
@@ -51,12 +52,32 @@ int open_network_socket_server(const char *address, in_port_t port, int backlog,
         server_fd = -1;
         goto done;
     }
-    ////ERROR HERE
+    // ERROR HERE
     server_fd = socket(addr.ss_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
 
     if(server_fd == -1)
     {
         *err = errno;
+        goto done;
+    }
+
+    // Returns flags of socket
+    flags = fcntl(server_fd, F_GETFL, 0);
+
+    if(flags == -1)
+    {
+        close(server_fd);
+        server_fd = -1;
+        *err      = errno;
+        goto done;
+    }
+
+    // Sets non-blocking flag to socket
+    if(fcntl(server_fd, F_SETFL, flags | O_NONBLOCK))
+    {
+        close(server_fd);
+        server_fd = -1;
+        *err      = errno;
         goto done;
     }
 
@@ -128,7 +149,14 @@ int accept_connection(int server_fd, int *err)
 
     if(client_fd == -1)
     {
+        if(errno == EWOULDBLOCK)
+        {
+            // Socket is not ready, try again later
+            *err = 0;
+            return -1;
+        }
         *err = errno;
+        return -1;
     }
 
     return client_fd;

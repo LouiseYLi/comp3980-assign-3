@@ -19,6 +19,7 @@ static int parseArguments(int argc, char *argv[], void *arg);
 
 #define BACKLOG 5
 #define SIZE 128
+#define HUNDRED_MILLISECONDS 100000000
 
 typedef char (*convertChar)(char);
 
@@ -75,11 +76,16 @@ done:
 int main(int argc, char *argv[])
 {
     struct socketNet data;
-    pid_t            pid;
-    int              retval;
-    int              err;
+    struct timespec  req;
+    struct timespec  rem;
+
+    pid_t pid;
+    int   retval;
+    int   err;
 
     const char *PORT = "9999";
+    req.tv_sec       = 0;
+    req.tv_nsec      = HUNDRED_MILLISECONDS;
     retval           = 0;
     err              = 0;
     data.ip          = NULL;
@@ -108,13 +114,15 @@ int main(int argc, char *argv[])
 
     while(terminate == 0)
     {
+        // Sleep just for making sure program isn't using too many resources.
+        nanosleep(&req, &rem);
         err = 0;
-        display(data.ip);
         data.client_fd = accept_connection(data.server_fd, &err);
         if(data.client_fd >= 0)
         {
             data.conversion = readChar(data.client_fd);
             pid             = fork();
+            displayNum(pid);
             if(pid == -1)
             {
                 perror("Error: fork failed");
@@ -129,8 +137,16 @@ int main(int argc, char *argv[])
             }
             else
             {
+                goto waitChild;
+            }
+        }
+        else
+        {
+            if(err == 0)
+            {
                 int child_status;
-                waitpid(pid, &child_status, 0);
+            waitChild:
+                waitpid(-1, &child_status, WNOHANG);
                 if(WIFEXITED(child_status))
                 {
                     display("Child exited normally\n");
@@ -139,13 +155,11 @@ int main(int argc, char *argv[])
                 {
                     display("Child did not exit normally\n");
                 }
+                continue;
             }
-        }
-        else
-        {
             perror("Error: server error accepting connection from client.");
             retval = -1;
-            goto done;
+            goto cleanup;
         }
     }
 
@@ -163,7 +177,6 @@ cleanup:
     {
         close(data.client_fd);
     }
-    // free(data.ip);
 done:
     return retval;
 }
