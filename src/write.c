@@ -27,27 +27,6 @@ int writeChar(int fd, const char c)
     return 0;
 }
 
-int readUntilNewline(int fd, char *buf)
-{
-    int  retval = -1;
-    int  index  = 0;
-    char currentChar;
-    currentChar = '\0';
-    while(currentChar != '\n')
-    {
-        ssize_t nread = read(fd, &buf[index], sizeof(char));
-        currentChar   = buf[index];
-        if(nread <= 0)
-        {
-            retval = (int)nread;
-            display("Error: unable to find delimiter for ip.");
-            goto done;
-        }
-    }
-done:
-    return retval;
-}
-
 ssize_t copy(size_t size, int *err, void *arg)
 {
     char                   *buf;

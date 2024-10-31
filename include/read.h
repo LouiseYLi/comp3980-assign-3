@@ -11,6 +11,4 @@
 
 char readChar(int fd);
 
-// int parseArguments(int argc, char *argv[], void *arg);
-
 #endif

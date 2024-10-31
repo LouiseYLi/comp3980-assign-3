@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
     {
         // Sleep just for making sure program isn't using too many resources.
         nanosleep(&req, &rem);
-        err = 0;
+        err            = 0;
         data.client_fd = accept_connection(data.server_fd, &err);
         if(data.client_fd >= 0)
         {

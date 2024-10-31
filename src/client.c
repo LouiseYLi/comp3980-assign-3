@@ -10,18 +10,8 @@
 #include <string.h>
 #include <unistd.h>
 
-// #define FIFO_INPUT "./fifo/input"
-// #define FIFO_OUTPUT "./fifo/output"
-
-// #define ERR_NONE 0
-// #define ERR_NO_DIGITS 1
-// #define ERR_OUT_OF_RANGE 2
-// #define ERR_INVALID_CHARS 3
-// static in_port_t convert_port(const char *str, int *err);
-
 int main(int argc, char *argv[])
 {
-    // char            *message;
     struct socketNet data;
     int              option;
     char             currentChar;
@@ -30,7 +20,7 @@ int main(int argc, char *argv[])
 
     const int   TOTAL_ARGS = 7;
     const char *PORT       = "9999";
-    const char *message    = NULL;
+    const char *MESSAGE    = NULL;
     retval                 = 0;
     err                    = 0;
     data.ip                = NULL;
@@ -55,7 +45,7 @@ int main(int argc, char *argv[])
                 data.ip = optarg;
                 break;
             case 's':
-                message = optarg;
+                MESSAGE = optarg;
                 break;
             case 'c':
                 data.conversion = getConvertOption(optarg);
@@ -66,7 +56,7 @@ int main(int argc, char *argv[])
                 goto done;
         }
     }
-    if(data.ip == NULL || message == NULL || data.conversion == ' ')
+    if(data.ip == NULL || MESSAGE == NULL || data.conversion == ' ')
     {
         perror("Error: error assigning option arguments.");
         retval = EXIT_FAILURE;
@@ -87,7 +77,7 @@ int main(int argc, char *argv[])
         retval = -1;
         goto cleanup;
     }
-    if(writeStr(data.client_fd, message) == -1)
+    if(writeStr(data.client_fd, MESSAGE) == -1)
     {
         retval = -1;
         goto cleanup;

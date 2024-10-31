@@ -13,8 +13,6 @@ int writeStr(int fifo, const char *buf);
 
 int writeChar(int fd, char c);
 
-int readUntilNewline(int fd, char *buf);
-
 ssize_t copy(size_t size, int *err, void *arg);
 
 #endif
