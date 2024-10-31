@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
         {
             data.conversion = readChar(data.client_fd);
             pid             = fork();
-            displayNum(pid);
+            // displayNum(pid);
             if(pid == -1)
             {
                 perror("Error: fork failed");
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
             }
             if(pid == 0)
             {
-                display("Child process\n");
+                // display("Child process\n");
                 copy(SIZE, &err, (void *)&data);
                 _exit(CHILD_EXIT);
             }
@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
                 waitpid(-1, &child_status, WNOHANG);
                 if(WIFEXITED(child_status))
                 {
-                    display("Child exited normally\n");
+                    // display("Child exited normally\n");
                 }
                 else
                 {
