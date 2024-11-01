@@ -17,7 +17,7 @@
 //  is in a separate file.
 // I made struct in a separate file to import because I didn't want to
 //  declare it multiple times for the program, that's why I disabled the
-//  unusedStructMember warnings. 
+//  unusedStructMember warnings.
 struct socketNet
 {
     // cppcheck-suppress unusedStructMember

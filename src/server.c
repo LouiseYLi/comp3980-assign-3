@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 #define CHILD_EXIT 42
-static int parseArguments(int argc, char *argv[], void *arg);
+// static int parseArguments(int argc, char *argv[], void *arg);
 
 #define BACKLOG 5
 #define SIZE 128
@@ -41,39 +41,7 @@ void handleSignal(int signal)
     }
 }
 
-static int parseArguments(int argc, char *argv[], void *arg)
-{
-    int               option;
-    int               retval;
-    struct socketNet *data = (struct socketNet *)arg;
-    data->ip               = NULL;
-    while((option = getopt(argc, argv, "i:")) != -1)
-    {
-        if(option == 'i')
-        {
-            data->ip = optarg;
-        }
-        else
-        {
-            perror("Error: invalid options.");
-            retval = -1;
-            goto done;
-        }
-    }
-    if(data->ip == NULL)
-    {
-        perror("Error: unable to parse ip.");
-        retval = -1;
-        goto done;
-    }
-
-    retval = 0;
-
-done:
-    return retval;
-}
-
-int main(int argc, char *argv[])
+int main(void)
 {
     struct socketNet data;
     struct timespec  req;
@@ -82,18 +50,19 @@ int main(int argc, char *argv[])
     pid_t pid;
     int   retval;
     int   err;
+    int   total_children;
 
     const char *PORT = "9999";
-    req.tv_sec       = 0;
-    req.tv_nsec      = HUNDRED_MILLISECONDS;
-    retval           = 0;
-    err              = 0;
-    data.ip          = NULL;
-    data.conversion  = ' ';
-    data.server_fd   = 0;
-    data.client_fd   = 0;
-    data.inport      = convert_port(PORT, &err);
-    data.outport     = convert_port(PORT, &err);
+    total_children  = 0;
+    req.tv_sec      = 0;
+    req.tv_nsec     = HUNDRED_MILLISECONDS;
+    retval          = 0;
+    err             = 0;
+    data.conversion = ' ';
+    data.server_fd  = 0;
+    data.client_fd  = 0;
+    data.inport     = convert_port(PORT, &err);
+    data.outport    = convert_port(PORT, &err);
 
     if(signal(SIGINT, handleSignal) == SIG_ERR)
     {
@@ -102,9 +71,7 @@ int main(int argc, char *argv[])
         goto done;
     }
 
-    parseArguments(argc, argv, (void *)&data);
-
-    data.server_fd = open_network_socket_server(data.ip, data.inport, BACKLOG, &err);
+    data.server_fd = open_network_socket_server("0.0.0.0", data.inport, BACKLOG, &err);
     if(data.server_fd < 0)
     {
         perror("Error: opening server-side network socket.");
@@ -122,7 +89,6 @@ int main(int argc, char *argv[])
         {
             data.conversion = readChar(data.client_fd);
             pid             = fork();
-            // displayNum(pid);
             if(pid == -1)
             {
                 perror("Error: fork failed");
@@ -131,35 +97,39 @@ int main(int argc, char *argv[])
             }
             if(pid == 0)
             {
-                // display("Child process\n");
+                display("Child process\n");
                 copy(SIZE, &err, (void *)&data);
                 _exit(CHILD_EXIT);
             }
             else
             {
-                goto waitChild;
+                int child_status;
+                ++total_children;
+                if(total_children > 0)
+                {
+                    pid_t result;
+                    display("Waiting for child\n");
+                    result = waitpid(-1, &child_status, WNOHANG);
+                    if(result > 0)
+                    {
+                        --total_children;
+                        display("Child exited normally\n");
+                    }
+                    else
+                    {
+                        display("Child did not exit normally\n");
+                    }
+                }
             }
         }
         else
         {
-            if(err == 0)
+            if(err != 0)
             {
-                int child_status;
-            waitChild:
-                waitpid(-1, &child_status, WNOHANG);
-                if(WIFEXITED(child_status))
-                {
-                    // display("Child exited normally\n");
-                }
-                else
-                {
-                    display("Child did not exit normally\n");
-                }
-                continue;
+                perror("Error: server error accepting connection from client.");
+                retval = -1;
+                goto cleanup;
             }
-            perror("Error: server error accepting connection from client.");
-            retval = -1;
-            goto cleanup;
         }
     }
 
