@@ -19,7 +19,7 @@
 
 #define BACKLOG 5
 #define SIZE 128
-#define HUNDRED_MILLISECONDS 100000000
+// #define HUNDRED_MILLISECONDS 100000000
 
 typedef char (*convertChar)(char);
 
@@ -44,8 +44,8 @@ void handleSignal(int signal)
 int main(void)
 {
     struct socketNet data;
-    struct timespec  req;
-    struct timespec  rem;
+    // struct timespec  req;
+    // struct timespec  rem;
 
     pid_t pid;
     int   retval;
@@ -53,9 +53,9 @@ int main(void)
     int   total_children;
 
     const char *PORT = "9999";
-    total_children  = 0;
-    req.tv_sec      = 0;
-    req.tv_nsec     = HUNDRED_MILLISECONDS;
+    total_children   = 0;
+    // req.tv_sec       = 0;
+    // req.tv_nsec      = HUNDRED_MILLISECONDS;
     retval          = 0;
     err             = 0;
     data.conversion = ' ';
@@ -82,7 +82,7 @@ int main(void)
     while(terminate == 0)
     {
         // Sleep just for making sure program isn't using too many resources.
-        nanosleep(&req, &rem);
+        // nanosleep(&req, &rem);
         err            = 0;
         data.client_fd = accept_connection(data.server_fd, &err);
         if(data.client_fd >= 0)
