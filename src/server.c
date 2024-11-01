@@ -44,8 +44,6 @@ void handleSignal(int signal)
 int main(void)
 {
     struct socketNet data;
-    // struct timespec  req;
-    // struct timespec  rem;
 
     pid_t pid;
     int   retval;
@@ -54,8 +52,6 @@ int main(void)
 
     const char *PORT = "9999";
     total_children   = 0;
-    // req.tv_sec       = 0;
-    // req.tv_nsec      = HUNDRED_MILLISECONDS;
     retval          = 0;
     err             = 0;
     data.conversion = ' ';
@@ -81,14 +77,13 @@ int main(void)
 
     while(terminate == 0)
     {
-        // Sleep just for making sure program isn't using too many resources.
-        // nanosleep(&req, &rem);
         err            = 0;
         data.client_fd = accept_connection(data.server_fd, &err);
         if(data.client_fd >= 0)
         {
             data.conversion = readChar(data.client_fd);
             pid             = fork();
+            // display("Forking child...");
             if(pid == -1)
             {
                 perror("Error: fork failed");
@@ -97,7 +92,7 @@ int main(void)
             }
             if(pid == 0)
             {
-                display("Child process\n");
+                // display("Child process\n");
                 copy(SIZE, &err, (void *)&data);
                 _exit(CHILD_EXIT);
             }
@@ -113,11 +108,11 @@ int main(void)
                     if(result > 0)
                     {
                         --total_children;
-                        display("Child exited normally\n");
+                        // display("Child exited normally\n");
                     }
                     else
                     {
-                        display("Child did not exit normally\n");
+                        // display("Child did not exit normally\n");
                     }
                 }
             }
