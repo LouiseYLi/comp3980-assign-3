@@ -18,7 +18,7 @@ int writeStr(int fifo, const char *buf)
 
 int writeChar(int fd, const char c)
 {
-    ssize_t bytes_written = send(fd, &c, sizeof(char), 0);
+    ssize_t bytes_written = write(fd, &c, sizeof(char));
     if(bytes_written == -1)
     {
         perror("Error: could not write fd.");
@@ -51,7 +51,7 @@ ssize_t copy(size_t size, int *err, void *arg)
     do
     {
         errno = 0;
-        nread = recv(data->client_fd, buf, size, 0);
+        nread = read(data->client_fd, buf, size);
 
         if(nread < 0)
         {
@@ -71,7 +71,7 @@ ssize_t copy(size_t size, int *err, void *arg)
 
             remaining = (size_t)(nread - nwrote);
             errno     = 0;
-            twrote    = send(data->client_fd, &buf[nwrote], remaining, 0);
+            twrote    = write(data->client_fd, &buf[nwrote], remaining);
 
             if(twrote < 0)
             {

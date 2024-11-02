@@ -86,10 +86,10 @@ int main(int argc, char *argv[])
     err              = 0;
     data.conversion  = ' ';
     data.server_fd   = 0;
-    data.client_fd   = 0;
-    data.ip          = NULL;
-    data.inport      = convert_port(PORT, &err);
-    data.outport     = convert_port(PORT, &err);
+    // data.client_fd   = -1;
+    data.ip      = NULL;
+    data.inport  = convert_port(PORT, &err);
+    data.outport = convert_port(PORT, &err);
 
     if(signal(SIGINT, handleSignal) == SIG_ERR)
     {
@@ -98,7 +98,12 @@ int main(int argc, char *argv[])
         goto done;
     }
 
-    parseArguments(argc, argv, (void *)&data);
+    if(parseArguments(argc, argv, (void *)&data) == -1)
+    {
+        perror("Error: parseArguments(...)");
+        retval = EXIT_FAILURE;
+        goto done;
+    }
 
     data.server_fd = open_network_socket_server(data.ip, data.inport, BACKLOG, &err);
     if(data.server_fd < 0)
@@ -116,7 +121,7 @@ int main(int argc, char *argv[])
         {
             data.conversion = readChar(data.client_fd);
             pid             = fork();
-            display("Forking child...");
+            // display("Forking child...");
             if(pid == -1)
             {
                 perror("Error: fork failed");
@@ -125,27 +130,28 @@ int main(int argc, char *argv[])
             }
             if(pid == 0)
             {
-                display("Child process\n");
+                // display("Child process\n");
                 copy(SIZE, &err, (void *)&data);
                 _exit(CHILD_EXIT);
             }
             else
             {
-                int child_status;
+                int child_status = 0;
                 ++total_children;
                 if(total_children > 0)
                 {
                     pid_t result;
-                    display("Waiting for child\n");
+                    // display("Waiting for child\n");
                     result = waitpid(-1, &child_status, WNOHANG);
+                    // displayNum(result);
                     if(result > 0)
                     {
                         --total_children;
-                        display("Child exited normally\n");
+                        // display("Child exited normally\n");
                     }
                     else
                     {
-                        display("Child did not exit normally\n");
+                        // display("Child did not exit normally\n");
                     }
                 }
             }

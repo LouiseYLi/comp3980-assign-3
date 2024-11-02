@@ -7,7 +7,7 @@ char readChar(int fd)
 
     do
     {
-        bytes_read = recv(fd, &c, sizeof(char), 0);
+        bytes_read = read(fd, &c, sizeof(char));
     } while(bytes_read == -1 && errno == EINTR);    // Retry on interrupted system calls
 
     if(bytes_read <= 0)
