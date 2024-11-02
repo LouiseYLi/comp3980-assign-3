@@ -41,7 +41,37 @@ void handleSignal(int signal)
     }
 }
 
-int main(void)
+static int parseArguments(int argc, char *argv[], void *arg)
+{
+    int               option;
+    int               retval;
+    struct socketNet *data = (struct socketNet *)arg;
+    data->ip               = NULL;
+    while((option = getopt(argc, argv, "i:")) != -1)
+    {
+        if(option == 'i')
+        {
+            data->ip = optarg;
+        }
+        else
+        {
+            perror("Error: invalid options.");
+            retval = -1;
+            goto done;
+        }
+    }
+    if(data->ip == NULL)
+    {
+        perror("Error: unable to parse ip.");
+        retval = -1;
+        goto done;
+    }
+    retval = 0;
+done:
+    return retval;
+}
+
+int main(int argc, char *argv[])
 {
     struct socketNet data;
 
@@ -52,13 +82,14 @@ int main(void)
 
     const char *PORT = "9999";
     total_children   = 0;
-    retval          = 0;
-    err             = 0;
-    data.conversion = ' ';
-    data.server_fd  = 0;
-    data.client_fd  = 0;
-    data.inport     = convert_port(PORT, &err);
-    data.outport    = convert_port(PORT, &err);
+    retval           = 0;
+    err              = 0;
+    data.conversion  = ' ';
+    data.server_fd   = 0;
+    data.client_fd   = 0;
+    data.ip          = NULL;
+    data.inport      = convert_port(PORT, &err);
+    data.outport     = convert_port(PORT, &err);
 
     if(signal(SIGINT, handleSignal) == SIG_ERR)
     {
@@ -67,7 +98,9 @@ int main(void)
         goto done;
     }
 
-    data.server_fd = open_network_socket_server("0.0.0.0", data.inport, BACKLOG, &err);
+    parseArguments(argc, argv, (void *)&data);
+
+    data.server_fd = open_network_socket_server(data.ip, data.inport, BACKLOG, &err);
     if(data.server_fd < 0)
     {
         perror("Error: opening server-side network socket.");
@@ -83,7 +116,7 @@ int main(void)
         {
             data.conversion = readChar(data.client_fd);
             pid             = fork();
-            // display("Forking child...");
+            display("Forking child...");
             if(pid == -1)
             {
                 perror("Error: fork failed");
@@ -92,7 +125,7 @@ int main(void)
             }
             if(pid == 0)
             {
-                // display("Child process\n");
+                display("Child process\n");
                 copy(SIZE, &err, (void *)&data);
                 _exit(CHILD_EXIT);
             }
@@ -108,11 +141,11 @@ int main(void)
                     if(result > 0)
                     {
                         --total_children;
-                        // display("Child exited normally\n");
+                        display("Child exited normally\n");
                     }
                     else
                     {
-                        // display("Child did not exit normally\n");
+                        display("Child did not exit normally\n");
                     }
                 }
             }
