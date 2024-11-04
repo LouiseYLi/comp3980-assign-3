@@ -15,11 +15,8 @@
 #include <unistd.h>
 
 #define CHILD_EXIT 42
-// static int parseArguments(int argc, char *argv[], void *arg);
-
 #define BACKLOG 5
 #define SIZE 128
-// #define HUNDRED_MILLISECONDS 100000000
 
 typedef char (*convertChar)(char);
 
@@ -86,7 +83,6 @@ int main(int argc, char *argv[])
     err              = 0;
     data.conversion  = ' ';
     data.server_fd   = 0;
-    // data.client_fd   = -1;
     data.ip      = NULL;
     data.inport  = convert_port(PORT, &err);
     data.outport = convert_port(PORT, &err);
