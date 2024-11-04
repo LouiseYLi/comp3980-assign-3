@@ -21,7 +21,7 @@ char none(char c)
 void convertBuffer(char *buf, convertChar convert)
 {
     int       i     = 0;
-    const int count = 50;
+    const int count = 128;
     while(i < count && buf[i] != '\0')
     {
         buf[i] = convert(buf[i]);
